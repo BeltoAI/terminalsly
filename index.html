@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SlyOS | The Edge Intelligence Infrastructure by Belto</title>
+<meta name="description" content="SlyOS by Belto Inc. is the infrastructure for deploying local AI models to edge devices. Zero latency, 100% privacy, WebGPU enabled.">
+<meta name="keywords" content="Edge AI, On-Device LLM, SLM, Belto, SlyOS, Local Inference, SDK, WebGPU, VoiceCore, Quantum">
+<meta name="author" content="Belto Inc.">
+<meta name="theme-color" content="#FF4D00">
+<meta property="og:type" content="website">
+<meta property="og:title" content="SlyOS - Intelligence at the Edge">
+<meta property="og:description" content="Run powerful AI models directly on user devices. The complete infrastructure by Belto Inc.">
+<meta property="og:image" content="./newnew.png">
+<link rel="icon" type="image/x-icon" href="./favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#050505;--fg:#c8c8c8;--accent:#FF4D00;--dim:#555;--border:#1a1a1a;
+--green:#4ade80;--blue:#60a5fa;--yellow:#facc15;--red:#f87171;--purple:#c084fc;
+--cyan:#22d3ee;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--fg);font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.6}
+::selection{background:var(--accent);color:#fff}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#222;border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+
+/* ── BOOT SCREEN ── */
+#boot{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;transition:opacity .6s ease}
+#boot.done{opacity:0;pointer-events:none}
+#boot-text{text-align:center;max-width:520px}
+#boot-text .line{opacity:0;transform:translateY(6px);transition:all .4s ease}
+#boot-text .line.show{opacity:1;transform:translateY(0)}
+.boot-accent{color:var(--accent);font-weight:700}
+.boot-dim{color:var(--dim)}
+.boot-cursor{display:inline-block;width:7px;height:14px;background:var(--accent);animation:blink 1s step-end infinite;vertical-align:middle;margin-left:2px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ── SHELL ── */
+#shell{display:none;height:100vh;flex-direction:column}
+#shell.active{display:flex}
+
+/* top bar */
+#topbar{
+height:38px;min-height:38px;display:flex;align-items:center;
+padding:0 16px;border-bottom:1px solid var(--border);
+background:#0a0a0a;gap:12px;
+}
+.dot{width:10px;height:10px;border-radius:50%}
+.dot-r{background:#ff5f57}.dot-y{background:#febc2e}.dot-g{background:#28c840}
+#topbar-title{flex:1;text-align:center;font-size:11px;color:var(--dim);letter-spacing:.05em}
+#topbar-links{display:flex;gap:12px;font-size:10px}
+#topbar-links a{color:var(--dim);text-decoration:none;transition:color .2s}
+#topbar-links a:hover{color:var(--accent)}
+
+/* output area */
+#output{flex:1;overflow-y:auto;padding:20px 20px 8px;scroll-behavior:smooth}
+.msg{margin-bottom:16px;max-width:720px;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.msg-sys{color:var(--dim);font-size:11px}
+.msg-user{color:var(--accent)}
+.msg-user::before{content:'> ';color:var(--dim)}
+.msg-bot{color:var(--fg)}
+.msg-bot h2{color:#fff;font-size:15px;font-weight:700;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.04em}
+.msg-bot h3{color:var(--accent);font-size:13px;font-weight:600;margin:10px 0 4px}
+.msg-bot p{margin:4px 0}
+.msg-bot ul{margin:4px 0 4px 18px;list-style:none}
+.msg-bot ul li::before{content:'→ ';color:var(--accent)}
+.msg-bot .stat{display:inline-block;background:#111;border:1px solid var(--border);padding:2px 8px;border-radius:3px;margin:2px 4px 2px 0;font-size:11px}
+.msg-bot .stat-label{color:var(--dim)}
+.msg-bot .stat-val{color:#fff;font-weight:600}
+.msg-bot a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent)}
+.msg-bot a:hover{color:#fff}
+.msg-bot code{background:#111;padding:1px 5px;border-radius:3px;font-size:12px;color:var(--cyan)}
+.msg-bot .card{background:#0a0a0a;border:1px solid var(--border);border-radius:6px;padding:12px;margin:8px 0;transition:border-color .2s}
+.msg-bot .card:hover{border-color:var(--accent)}
+.msg-bot .card-title{color:#fff;font-weight:600;font-size:13px}
+.msg-bot .card-meta{color:var(--dim);font-size:10px;margin-top:2px;letter-spacing:.03em}
+.msg-bot .card-desc{color:var(--fg);font-size:12px;margin-top:4px}
+.msg-bot .tag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:2px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-right:4px}
+.tag-ready{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.2)}
+.tag-soon{background:rgba(255,255,255,.04);color:var(--dim);border:1px solid var(--border)}
+.tag-rec{background:rgba(255,77,0,.12);color:var(--accent);border:1px solid rgba(255,77,0,.2)}
+.highlight{color:var(--accent);font-weight:600}
+.section-divider{border:none;border-top:1px solid var(--border);margin:12px 0}
+.codeblock{background:#0a0a0a;border:1px solid var(--border);border-radius:6px;padding:12px;margin:8px 0;overflow-x:auto;font-size:12px;line-height:1.5}
+.codeblock .cm{color:var(--dim)}.codeblock .kw{color:var(--purple)}.codeblock .str{color:var(--green)}.codeblock .fn{color:var(--cyan)}.codeblock .num{color:var(--yellow)}
+
+/* suggestions */
+#suggestions{padding:4px 20px 6px;display:flex;flex-wrap:wrap;gap:6px;min-height:32px}
+.sug{
+background:#111;border:1px solid var(--border);color:var(--fg);
+font-family:inherit;font-size:11px;padding:4px 12px;border-radius:4px;
+cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.sug:hover{border-color:var(--accent);color:var(--accent);background:#0f0800}
+
+/* input bar */
+#inputbar{
+display:flex;align-items:center;gap:8px;
+padding:10px 16px;border-top:1px solid var(--border);background:#0a0a0a;
+}
+#prompt-prefix{color:var(--accent);font-weight:700;font-size:14px;user-select:none}
+#prompt{
+flex:1;background:transparent;border:none;outline:none;
+color:var(--fg);font-family:inherit;font-size:13px;caret-color:var(--accent);
+}
+#prompt::placeholder{color:#333}
+#send-btn{
+background:none;border:1px solid var(--border);color:var(--dim);
+font-family:inherit;font-size:11px;padding:4px 12px;border-radius:4px;
+cursor:pointer;transition:all .15s;
+}
+#send-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* form inside output */
+.inline-form{margin:8px 0}
+.inline-form label{display:block;color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin:8px 0 3px}
+.inline-form input,.inline-form select{
+display:block;width:100%;max-width:360px;background:#0a0a0a;border:1px solid var(--border);
+border-radius:4px;padding:8px 10px;color:#fff;font-family:inherit;font-size:12px;
+outline:none;transition:border-color .2s;
+}
+.inline-form input:focus,.inline-form select:focus{border-color:var(--accent)}
+.inline-form select{cursor:pointer;-webkit-appearance:none}
+.inline-form button{
+margin-top:12px;background:var(--accent);color:#fff;border:none;
+padding:8px 24px;border-radius:4px;font-family:inherit;font-size:12px;
+font-weight:600;cursor:pointer;transition:transform .1s;
+}
+.inline-form button:hover{transform:scale(1.02)}
+.inline-form button:active{transform:scale(.98)}
+
+/* responsive */
+@media(max-width:600px){
+#topbar-links{display:none}
+#output{padding:12px 12px 4px}
+#suggestions{padding:4px 12px 6px}
+.msg-bot .card{padding:10px}
+}
+</style>
+</head>
+<body>
+
+<!-- BOOT SEQUENCE -->
+<div id="boot">
+<div id="boot-text"></div>
+</div>
+
+<!-- TERMINAL SHELL -->
+<div id="shell">
+<div id="topbar">
+  <div class="dot dot-r"></div>
+  <div class="dot dot-y"></div>
+  <div class="dot dot-g"></div>
+  <div id="topbar-title"><span id="topbar-wl" style="color:var(--accent);font-weight:600"></span> <span>slyos@belto ~ v1.0</span></div>
+  <div id="topbar-links">
+    <a href="https://dashboard-khaki-iota-54.vercel.app" target="_blank">console</a>
+    <a href="https://zenodo.org/records/19041422" target="_blank">paper</a>
+    <a href="mailto:support@belto.world">contact</a>
+  </div>
+</div>
+<div id="output"></div>
+<div id="suggestions"></div>
+<div id="inputbar">
+  <span id="prompt-prefix">❯</span>
+  <input id="prompt" type="text" placeholder="type a command or ask anything..." autocomplete="off" autofocus spellcheck="false">
+  <button id="send-btn">run</button>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════
+
+const MODELS = [
+  {name:'Quantum 135M',id:'quantum-135m',size:'80MB',ram:'250MB',speed:'50-60 t/s',desc:'Quick responses, autocomplete, simple chat.',rec:false,type:'text'},
+  {name:'Quantum 360M',id:'quantum-360m',size:'200MB',ram:'512MB',speed:'40-50 t/s',desc:'General chat, Q&A, content generation.',rec:true,type:'text'},
+  {name:'Quantum 1.7B',id:'quantum-1.7b',size:'1000MB',ram:'2GB',speed:'25-35 t/s',desc:'Complex reasoning, code generation, analysis.',rec:false,type:'text'},
+  {name:'Quantum 3B',id:'quantum-3b',size:'1700MB',ram:'4GB',speed:'15-25 t/s',desc:'Advanced chat, detailed analysis, research.',rec:false,type:'text'},
+  {name:'Quantum Code 3B',id:'quantum-code-3b',size:'1800MB',ram:'4GB',speed:'16-25 t/s',desc:'Code generation, debugging, refactoring.',rec:true,type:'code'},
+  {name:'Quantum 8B',id:'quantum-8b',size:'4500MB',ram:'8GB',speed:'8-15 t/s',desc:'Professional writing, complex analysis. Desktop-only.',rec:false,type:'text'},
+  {name:'VoiceCore Tiny',id:'voicecore-tiny',size:'128MB',ram:'128MB',speed:'0.2x RT',desc:'Voice commands, quick transcription, subtitles.',rec:false,type:'voice'},
+  {name:'VoiceCore Base',id:'voicecore-base',size:'256MB',ram:'256MB',speed:'0.3x RT',desc:'General transcription, meetings, podcasts.',rec:true,type:'voice'},
+  {name:'VoiceCore Small',id:'voicecore-small',size:'512MB',ram:'512MB',speed:'0.5x RT',desc:'High-quality transcription, interviews.',rec:false,type:'voice'},
+];
+
+const PLATFORMS = [
+  {name:'WebGPU (Chrome/Edge)',status:'ready'},
+  {name:'Ollama (Desktop)',status:'ready'},
+  {name:'iOS (CoreML)',status:'soon'},
+  {name:'Android (NNAPI)',status:'soon'},
+];
+
+const FAQ = [
+  {q:'Do users need to download the model every time?',a:'No. SlyOS uses the Cache API and IndexedDB to store model weights persistently on the device. The download (~200MB for base models) happens only once on first load. Subsequent loads are instant.'},
+  {q:'What happens on older devices?',a:'The SDK runs a hardware check via SlyOS.checkCompatibility() before initializing. If the device lacks WebGPU or sufficient RAM, you can configure a fallback to our cloud API or a graceful degradation message.'},
+  {q:'Does this drain the user\'s battery?',a:'Inference uses optimized WebGPU shaders that are significantly more efficient than CPU inference. For short tasks (chat, command classification), the impact is negligible. For long-running tasks, the SDK can check battery status.'},
+  {q:'Are the models uncensored?',a:'Models in the Zoo retain their original base licensing and alignment (e.g., Llama 3 safeguards). We also offer "Quantum-Code" variants fine-tuned for strict instruction following with reduced refusal rates for developer use cases.'},
+];
+
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwXTLh0yw8gg6OV8zW2o1djmhlk4T5pt7QIXMuy9l7n8uJAh3Vsc9IMN1rDQnSb4MMF/exec';
+
+// ═══════════════════════════════════════
+// BOOT SEQUENCE
+// ═══════════════════════════════════════
+
+const bootLines = [
+  {text:'BELTO INC. // SYSTEM BOOT',cls:'boot-dim',delay:0},
+  {text:'Initializing SlyOS v1.0 ...',cls:'boot-dim',delay:400},
+  {text:'Loading edge runtime ██████████ done',cls:'boot-dim',delay:800},
+  {text:'WebGPU shaders compiled.',cls:'boot-dim',delay:1100},
+  {text:'',cls:'',delay:1400},
+  {text:'Intelligence at the Edge.',cls:'boot-accent',delay:1500},
+  {text:'Infrastructure for Local AI.',cls:'boot-accent',delay:1900},
+  {text:'',cls:'',delay:2200},
+  {text:'Type help to begin.█',cls:'boot-dim',delay:2400,cursor:true},
+];
+
+function runBoot(){
+  const container=document.getElementById('boot-text');
+  bootLines.forEach((l,i)=>{
+    const div=document.createElement('div');
+    div.className='line';
+    if(l.cursor) div.innerHTML=`<span class="${l.cls}">${l.text.replace('█','')}</span><span class="boot-cursor"></span>`;
+    else div.innerHTML=`<span class="${l.cls}">${l.text}</span>`;
+    if(!l.text) div.innerHTML='&nbsp;';
+    container.appendChild(div);
+    setTimeout(()=>div.classList.add('show'),l.delay);
+  });
+  // transition to shell
+  setTimeout(()=>{
+    document.getElementById('boot').classList.add('done');
+    setTimeout(()=>{
+      document.getElementById('boot').style.display='none';
+      document.getElementById('shell').classList.add('active');
+      showWelcome();
+      document.getElementById('prompt').focus();
+    },600);
+  },3800);
+}
+
+// ═══════════════════════════════════════
+// TERMINAL ENGINE
+// ═══════════════════════════════════════
+
+const output=()=>document.getElementById('output');
+const sugsEl=()=>document.getElementById('suggestions');
+
+function addMsg(html,cls='msg-bot'){
+  const d=document.createElement('div');
+  d.className='msg '+cls;
+  d.innerHTML=html;
+  output().appendChild(d);
+  output().scrollTop=output().scrollHeight;
+  return d;
+}
+
+function setSuggestions(arr){
+  const el=sugsEl();
+  el.innerHTML='';
+  arr.forEach(s=>{
+    const b=document.createElement('button');
+    b.className='sug';
+    b.textContent=s;
+    b.onclick=()=>handleInput(s);
+    el.appendChild(b);
+  });
+}
+
+function showWelcome(){
+  addMsg(`<span style="color:var(--accent);font-weight:700;font-size:15px">SlyOS</span> <span style="color:var(--dim)">— Edge Intelligence Infrastructure by Belto Inc.</span>
+
+<p>Deploy language models directly to your users' devices. <span class="highlight">Zero latency. 100% privacy. No per-token fees.</span></p>
+
+<div style="margin:8px 0;padding:8px 12px;background:rgba(255,77,0,.06);border:1px solid rgba(255,77,0,.15);border-radius:4px;display:inline-flex;align-items:center;gap:8px">
+<span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;animation:blink 1.5s infinite"></span>
+<span style="color:var(--dim);font-size:11px">Live Waitlist:</span>
+<span style="color:var(--accent);font-weight:700;font-size:14px" id="welcome-wl-count">...</span>
+<span style="color:var(--dim);font-size:11px">builders waiting</span>
+</div>
+
+<hr class="section-divider">
+<p style="color:var(--dim);font-size:11px">Available commands:</p>
+<p><span class="highlight">overview</span> — what is SlyOS and why it matters</p>
+<p><span class="highlight">models</span> — browse the Model Zoo</p>
+<p><span class="highlight">quickstart</span> — get started in 60 seconds</p>
+<p><span class="highlight">pricing</span> — unit economics breakdown</p>
+<p><span class="highlight">platforms</span> — supported runtimes</p>
+<p><span class="highlight">architecture</span> — deployment architectures</p>
+<p><span class="highlight">faq</span> — technical questions</p>
+<p><span class="highlight">waitlist</span> — join the early access program</p>
+<p><span class="highlight">demo</span> — schedule a live demo</p>
+<p><span class="highlight">paper</span> — read the architecture paper</p>
+<p><span class="highlight">login</span> — open the developer console</p>
+<p><span class="highlight">clear</span> — reset the terminal</p>
+<p><span class="highlight">help</span> — show this menu</p>`,'msg-bot');
+  setSuggestions(['overview','models','quickstart','waitlist','demo','faq']);
+  // update welcome counter with cached value
+  const el=document.getElementById('welcome-wl-count');
+  if(el && window._wlCount) el.textContent=window._wlCount;
+}
+
+// ═══════════════════════════════════════
+// COMMAND ROUTER
+// ═══════════════════════════════════════
+
+function handleInput(raw){
+  const input=raw.trim();
+  if(!input) return;
+  addMsg(input,'msg-user');
+  const cmd=input.toLowerCase().replace(/[^a-z0-9 ]/g,'');
+  
+  if(match(cmd,['help','commands','menu','home','start','back','?']))showWelcome();
+  else if(match(cmd,['overview','about','what is slyos','what','why','pitch','info']))cmdOverview();
+  else if(match(cmd,['models','model zoo','zoo','lm','lms','model','llm','slm']))cmdModels();
+  else if(match(cmd,['quickstart','quick start','get started','start','setup','install','how','integrate','integration','how it works','pipeline','steps','sdk']))cmdQuickstart();
+  else if(match(cmd,['pricing','price','cost','economics','unit economics','how much']))cmdPricing();
+  else if(match(cmd,['platforms','platform','runtime','runtimes','support','supported','webgpu','ios','android','ollama']))cmdPlatforms();
+  else if(match(cmd,['architecture','arch','architectures','edge','grid','hybrid','deployment','dual']))cmdArchitecture();
+  else if(match(cmd,['faq','questions','question','ask','battery','download','uncensored','older devices','cache']))cmdFAQ();
+  else if(match(cmd,['waitlist','join','register','signup','sign up','early access','wait list','reserve']))cmdWaitlist();
+  else if(match(cmd,['demo','schedule','schedule demo','book','call','meeting']))cmdDemo();
+  else if(match(cmd,['paper','research','whitepaper','white paper','zenodo','read']))cmdPaper();
+  else if(match(cmd,['login','console','dashboard','sign in','signin']))cmdLogin();
+  else if(match(cmd,['clear','cls','reset']))cmdClear();
+  else if(match(cmd,['observability','fleet','telemetry','analytics','dashboard devices','monitor']))cmdObservability();
+  else if(match(cmd,['privacy','privacy policy']))cmdPrivacy();
+  else if(match(cmd,['terms','terms of service','tos']))cmdTerms();
+  else if(match(cmd,['builders','chatbot','consumer','for builders']))cmdBuilders();
+  else if(match(cmd,['rag','hybrid rag','vector','context']))cmdRAG();
+  else cmdUnknown(input);
+
+  document.getElementById('prompt').value='';
+}
+
+function match(input,keywords){
+  return keywords.some(k=>input===k||input.startsWith(k+' ')||input.includes(k));
+}
+
+// ═══════════════════════════════════════
+// COMMANDS
+// ═══════════════════════════════════════
+
+function cmdOverview(){
+  addMsg(`<h2>What is SlyOS?</h2>
+<p>SlyOS is the complete infrastructure for deploying language models directly to your users' devices — browsers, phones, laptops, and edge hardware.</p>
+
+<p>Instead of routing every AI request through expensive cloud APIs, SlyOS runs inference <span class="highlight">locally on the device</span> using WebGPU, CoreML, and NNAPI.</p>
+
+<hr class="section-divider">
+<h3>The Problem</h3>
+<p>Every AI-powered consumer app today pays per token to cloud providers. Your costs scale linearly with your success. More users = more burn. Your gross margins collapse the moment your product works well.</p>
+
+<h3>The SlyOS Fix</h3>
+<p>Move inference to the edge. Replace unpredictable <code>$1.50/user</code> variable costs with a fixed <code>$0.15/device</code> fee. Slash infrastructure bills by up to <span class="highlight">90%</span>.</p>
+
+<hr class="section-divider">
+<h3>Core Value Props</h3>
+<ul>
+<li><span class="highlight">Zero Latency</span> — no round-trip to a server. Responses in ~12-50ms.</li>
+<li><span class="highlight">100% Privacy</span> — user data never leaves the device. No prompts or completions are collected.</li>
+<li><span class="highlight">Flat Economics</span> — users can chat for hours without costing you a dime in server bills.</li>
+<li><span class="highlight">Offline-First</span> — works without internet after initial model download.</li>
+<li><span class="highlight">No Testing Punishment</span> — QA teams can run unlimited tokens without blowing your budget.</li>
+</ul>
+
+<p style="color:var(--dim);font-size:11px;margin-top:12px">npm install @belto/slyos-sdk</p>`);
+  setSuggestions(['quickstart','models','pricing','waitlist','architecture']);
+}
+
+function cmdModels(){
+  let html=`<h2>Model Zoo</h2>
+<p>Optimized weights for instant edge deployment. You can also import any model from Hugging Face or upload your own <code>.onnx</code>, <code>.tflite</code>, or <code>.gguf</code> weights.</p>
+<hr class="section-divider">`;
+
+  MODELS.forEach(m=>{
+    const recTag=m.rec?'<span class="tag tag-rec">★ recommended</span>':'';
+    const typeTag=`<span class="tag tag-ready">${m.type}</span>`;
+    html+=`<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px">
+  <span class="card-title">${m.name}</span>
+  <div>${typeTag}${recTag}</div>
+</div>
+<div class="card-meta">${m.id}</div>
+<div class="card-desc">${m.desc}</div>
+<div style="margin-top:8px">
+  <span class="stat"><span class="stat-label">size </span><span class="stat-val">${m.size}</span></span>
+  <span class="stat"><span class="stat-label">ram </span><span class="stat-val">${m.ram}</span></span>
+  <span class="stat"><span class="stat-label">speed </span><span class="stat-val">${m.speed}</span></span>
+</div>
+</div>`;
+  });
+
+  html+=`<hr class="section-divider">
+<div class="card" style="border-style:dashed">
+  <span class="card-title">+ Bring Your Own Model</span>
+  <div class="card-desc">Drop your .onnx, .tflite, or .gguf files. We handle quantization, sharding, and deployment routing.</div>
+</div>
+<div class="card" style="border-color:rgba(250,204,21,.2)">
+  <span class="card-title" style="color:var(--yellow)">🤗 Hugging Face Bridge</span>
+  <div class="card-desc">Paste any HF repository URL. We'll handle sharding, pruning, and edge optimization automatically.</div>
+</div>`;
+
+  addMsg(html);
+  setSuggestions(['quickstart','overview','pricing','waitlist']);
+}
+
+function cmdQuickstart(){
+  addMsg(`<h2>Zero to Edge in 60 Seconds</h2>
+<p>The fastest pipeline from raw weights to on-device intelligence.</p>
+<hr class="section-divider">
+
+<h3>Step 1 — Authenticate</h3>
+<p>Login to the <a href="https://dashboard-khaki-iota-54.vercel.app" target="_blank">SlyOS Console</a> and initialize your secure workspace.</p>
+
+<h3>Step 2 — Select Engine</h3>
+<p>Choose from the optimized Model Zoo or pull any model from Hugging Face.</p>
+
+<h3>Step 3 — Inject Context</h3>
+<p>Upload data to the RAG DB so the LM knows exactly what to talk about.</p>
+
+<h3>Step 4 — Configure</h3>
+<p>Tune quantization levels (q4, q8) and set your hardware routing logic.</p>
+
+<h3>Step 5 — Get SDK</h3>
+<p>Grab your API key, drop the SDK into your app, and go live.</p>
+
+<hr class="section-divider">
+
+<div class="codeblock"><span class="cm">// 1. Initialize the edge agent</span>
+<span class="kw">const</span> agent = <span class="kw">await</span> <span class="fn">SlyOS.init</span>(<span class="str">"quantum-360m"</span>);
+
+<span class="cm">// 2. Sync your RAG context</span>
+<span class="kw">await</span> agent.<span class="fn">sync</span>(<span class="str">"https://slyos.db/your-project-id"</span>);
+
+<span class="cm">// 3. Query with zero latency</span>
+<span class="kw">const</span> result = <span class="kw">await</span> agent.<span class="fn">ask</span>(<span class="str">"Initialize diagnostic run."</span>);
+</div>
+
+<p style="color:var(--dim);font-size:11px;margin-top:8px">One-line chatbot starter kit:</p>
+<div class="codeblock"><span class="fn">npx</span> @belto/create-local-chat</div>
+<p style="color:var(--dim);font-size:11px">Clones template → installs deps → downloads Quantum-360M → ready on localhost:3000</p>`);
+  setSuggestions(['models','pricing','waitlist','architecture','login']);
+}
+
+function cmdPricing(){
+  addMsg(`<h2>Unit Economics</h2>
+<p>Stop the variable "Cloud Burn." Move inference to the edge.</p>
+<hr class="section-divider">
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <span class="card-title">SlyOS Pure Edge</span>
+    <span class="tag tag-rec">most popular</span>
+  </div>
+  <div style="font-size:28px;font-weight:700;color:#fff;margin:8px 0">$0.15 <span style="font-size:12px;color:var(--dim);font-weight:400">/device/mo</span></div>
+  <div class="card-desc">Full on-device inference, Model Zoo access, local weight encryption, CDN distribution, analytics dashboard.</div>
+</div>
+
+<div class="card" style="border-color:rgba(96,165,250,.2)">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <span class="card-title" style="color:var(--blue)">SlyOS Hybrid RAG</span>
+    <span class="tag" style="background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.2)">advanced</span>
+  </div>
+  <div style="font-size:28px;font-weight:700;color:#fff;margin:8px 0">$0.45 <span style="font-size:12px;color:var(--dim);font-weight:400">/device/mo</span></div>
+  <div class="card-desc">Everything in Pure Edge + managed Vector DB, automated data sharding, cloud-to-edge sync, priority NPU optimization.</div>
+</div>
+
+<hr class="section-divider">
+<h3>Comparison</h3>
+<p><span class="stat"><span class="stat-label">cloud api avg </span><span class="stat-val" style="color:var(--red)">~$1.50/user/mo</span></span></p>
+<p><span class="stat"><span class="stat-label">slyos edge </span><span class="stat-val" style="color:var(--green)">$0.15/device/mo</span></span></p>
+<p><span class="stat"><span class="stat-label">savings </span><span class="stat-val" style="color:var(--accent)">up to 90%</span></span></p>
+<p style="margin-top:8px">Gross margins stay at <span class="highlight">93-94%</span> regardless of token volume. Testing doesn't break your bank.</p>`);
+  setSuggestions(['waitlist','demo','overview','models']);
+}
+
+function cmdPlatforms(){
+  let html=`<h2>Supported Platforms</h2><hr class="section-divider">`;
+  PLATFORMS.forEach(p=>{
+    const tag=p.status==='ready'?'<span class="tag tag-ready">● ready</span>':'<span class="tag tag-soon">coming soon</span>';
+    html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><span class="card-title">${p.name}</span>${tag}</div></div>`;
+  });
+  html+=`<p style="margin-top:8px;color:var(--dim);font-size:11px">The SDK auto-detects the available runtime and selects the optimal execution backend.</p>`;
+  addMsg(html);
+  setSuggestions(['models','quickstart','architecture','overview']);
+}
+
+function cmdArchitecture(){
+  addMsg(`<h2>Dual Deployment Architectures</h2>
+<p>SlyOS adapts to the available compute environment.</p>
+<hr class="section-divider">
+
+<div class="card">
+  <span class="tag tag-rec">Architecture A</span>
+  <div class="card-title" style="margin-top:4px">Direct Edge Inference</div>
+  <div class="card-desc" style="margin-top:6px">The standard SlyOS flow. A user's single device downloads an optimized SLM (e.g., 360M params) and runs it completely independently.</div>
+  <div style="margin-top:8px">
+    <span class="stat"><span class="stat-val">ultra-low latency</span></span>
+    <span class="stat"><span class="stat-val">works offline</span></span>
+    <span class="stat"><span class="stat-val">100% privacy</span></span>
+  </div>
+  <div style="margin-top:8px;color:var(--dim);font-size:11px">[SLM cached on device] ──── inference ────▶ [user device]</div>
+</div>
+
+<div class="card" style="border-color:rgba(96,165,250,.2)">
+  <span class="tag" style="background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.2)">Architecture B</span>
+  <div class="card-title" style="margin-top:4px">Ad-Hoc Local Grid</div>
+  <div class="card-desc" style="margin-top:6px">Leverage idle office compute. For latency-independent tasks, SlyOS splits a large model (e.g., 8B-70B) across available workstations over the local 1GbE LAN.</div>
+  <div style="margin-top:8px">
+    <span class="stat"><span class="stat-val">utilizes idle VRAM/CPU</span></span>
+    <span class="stat"><span class="stat-val">runs larger models</span></span>
+    <span class="stat"><span class="stat-val">data stays on LAN</span></span>
+  </div>
+  <div style="margin-top:8px;color:var(--dim);font-size:11px">[large model] ──▶ shard 1 → station A<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;──▶ shard 2 → station B ──▶ [recombined result]<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;──▶ shard 3 → station C</div>
+</div>
+
+<hr class="section-divider">
+<h3>Hardware Dominance Strategy</h3>
+<p>Phase 1: <span class="highlight">Phones / Web / Laptops</span> (largest surface area, strategic entry)</p>
+<p>Phase 2: Cars / Play Consoles</p>
+<p>Phase 3: Smartglasses</p>
+<p>Phase 4: Everywhere</p>`);
+  setSuggestions(['quickstart','models','pricing','overview','rag']);
+}
+
+function cmdFAQ(){
+  let html=`<h2>Technical FAQ</h2><hr class="section-divider">`;
+  FAQ.forEach(f=>{
+    html+=`<div class="card">
+<div class="card-title" style="color:var(--fg)">${f.q}</div>
+<div class="card-desc" style="margin-top:6px;color:var(--dim)">${f.a}</div>
+</div>`;
+  });
+  addMsg(html);
+  setSuggestions(['models','quickstart','waitlist','overview']);
+}
+
+function cmdBuilders(){
+  addMsg(`<h2>For Consumer App Builders</h2>
+<p>If you're building a consumer app with a chatbot, cloud API costs scale linearly with your success. With SlyOS, your costs are flat no matter how much your users chat.</p>
+<hr class="section-divider">
+<h3>Unlimited Inference</h3>
+<p>Users can chat for hours without costing you a dime in server bills.</p>
+<h3>Deploy in Seconds</h3>
+<div class="codeblock"><span class="fn">npx</span> @belto/create-local-chat
+
+<span class="cm">> Cloning template...</span>
+<span class="cm">> Installing dependencies...</span>
+<span class="cm">> Downloading Quantum-360M...</span>
+<span style="color:var(--green)">✓ Ready on localhost:3000</span>
+</div>
+<h3>Target Customer Clusters</h3>
+<ul>
+<li><span class="highlight">Productivity Giants</span> — profit eaten by cloud taxes, UX killed by latency</li>
+<li><span class="highlight">Model Architects</span> — extreme infra overhead, stalling at prompt limits</li>
+</ul>`);
+  setSuggestions(['quickstart','models','pricing','waitlist']);
+}
+
+function cmdRAG(){
+  addMsg(`<h2>Intelligent Hybrid RAG</h2>
+<p>Route to cloud only when it makes sense. Use the Hybrid RAG model to keep <span class="highlight">90% of interactions local</span> for privacy and speed, while utilizing cloud-based Vector DBs only for complex retrievals.</p>
+<hr class="section-divider">
+<ul>
+<li>Local-first retrieval for common queries</li>
+<li>Cloud-based Vector DB sync for complex knowledge graphs</li>
+<li>Automatic routing based on query complexity</li>
+<li>High-fidelity responses without the GPT-4o-mini price tag</li>
+</ul>
+<p>Upload data to the RAG DB via the console so the LM knows exactly what to talk about.</p>`);
+  setSuggestions(['architecture','pricing','quickstart','models']);
+}
+
+function cmdObservability(){
+  addMsg(`<h2>Fleet Observability</h2>
+<p>Track latency, memory pressure, and model performance across every device in your fleet. Real-time telemetry without seeing user data.</p>
+<hr class="section-divider">
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+<span class="stat"><span style="color:var(--green)">●</span> <span class="stat-val">14,203 Active Devices</span></span>
+<span class="stat"><span style="color:var(--accent)">~</span> <span class="stat-val">42ms Avg Latency</span></span>
+</div>
+
+<div class="card"><div style="display:flex;gap:20px;flex-wrap:wrap;font-size:11px">
+<div><span style="color:var(--dim)">UUID</span> dev-8a92-f3</div>
+<div><span style="color:var(--dim)">ENV</span> Chrome/WebGPU</div>
+<div><span style="color:var(--dim)">MODEL</span> quantum-360m</div>
+<div><span style="color:var(--dim)">VRAM</span> 412MB/8GB</div>
+<div><span style="color:var(--green)">52 t/s</span></div>
+<div><span class="tag tag-ready">online</span></div>
+</div></div>
+
+<div class="card"><div style="display:flex;gap:20px;flex-wrap:wrap;font-size:11px">
+<div><span style="color:var(--dim)">UUID</span> dev-b211-a9</div>
+<div><span style="color:var(--dim)">ENV</span> iOS 17.2</div>
+<div><span style="color:var(--dim)">MODEL</span> voicecore-base</div>
+<div><span style="color:var(--dim)">VRAM</span> 256MB/6GB</div>
+<div><span style="color:var(--green)">0.3x RT</span></div>
+<div><span class="tag tag-ready">online</span></div>
+</div></div>
+
+<div class="card"><div style="display:flex;gap:20px;flex-wrap:wrap;font-size:11px">
+<div><span style="color:var(--dim)">UUID</span> dev-c440-e1</div>
+<div><span style="color:var(--dim)">ENV</span> Android 14</div>
+<div><span style="color:var(--dim)">MODEL</span> quantum-135m</div>
+<div><span style="color:var(--dim)">VRAM</span> 180MB/12GB</div>
+<div><span style="color:var(--yellow)">18 t/s</span></div>
+<div><span class="tag tag-soon">idle</span></div>
+</div></div>
+
+<div class="card"><div style="display:flex;gap:20px;flex-wrap:wrap;font-size:11px">
+<div><span style="color:var(--dim)">UUID</span> dev-f999-z0</div>
+<div><span style="color:var(--dim)">ENV</span> Mac/Metal</div>
+<div><span style="color:var(--dim)">MODEL</span> quantum-8b</div>
+<div><span style="color:var(--dim)">VRAM</span> 5.2GB/32GB</div>
+<div><span style="color:var(--green)">88 t/s</span></div>
+<div><span class="tag tag-ready">online</span></div>
+</div></div>
+
+<p style="color:var(--dim);font-size:11px;margin-top:8px">We do NOT collect prompts or completions. Telemetry is device-level performance metrics only.</p>`);
+  setSuggestions(['privacy','overview','models','quickstart']);
+}
+
+function cmdPrivacy(){
+  addMsg(`<h2>Privacy Policy</h2>
+<p style="color:var(--dim);font-size:11px">Last Updated: January 28, 2026</p>
+<hr class="section-divider">
+<h3>Local-First Architecture</h3>
+<p>SlyOS is designed as a "Local-First" infrastructure. The core processing of data (AI inference) occurs on the End User's device, not on our servers.</p>
+
+<h3>Telemetry We Collect</h3>
+<ul>
+<li>Anonymized device UUID</li>
+<li>Hardware specs (CPU cores, GPU model, RAM, OS version)</li>
+<li>Performance metrics (latency, tokens/sec, load times)</li>
+<li>Status heartbeats (Active, Idle, Offline)</li>
+</ul>
+
+<h3 style="color:var(--red)">Data We Do NOT Collect</h3>
+<p style="color:var(--red)">We do not collect, store, or transmit the content of Prompts (inputs) or Completions (outputs) generated by the models. All text generation happens locally on the device hardware.</p>
+
+<h3>Storage</h3>
+<p>Telemetry data is stored in encrypted databases (AWS RDS) in US-EAST-2. Access is restricted to authorized Belto personnel and the specific Organization Admin who owns the API Key.</p>`);
+  setSuggestions(['terms','overview','help']);
+}
+
+function cmdTerms(){
+  addMsg(`<h2>Terms of Service</h2>
+<p style="color:var(--dim);font-size:11px">Effective Date: January 28, 2026</p>
+<hr class="section-divider">
+<h3>License</h3>
+<p>Belto Inc. grants you a limited, non-exclusive, non-transferable, revocable license to use the SDK for enabling on-device AI inference within your applications.</p>
+
+<h3>Restrictions</h3>
+<ul>
+<li>No reverse engineering of SDK binaries or the quantization engine</li>
+<li>No distribution of malicious code or illegal content</li>
+<li>No flooding the API with fake device registrations</li>
+</ul>
+
+<h3>Model Licensing</h3>
+<p>Models in the Zoo (Llama, Mistral, Qwen derivatives) are subject to their original licenses (Apache 2.0, MIT, or Community License). You're responsible for complying with attribution requirements.</p>
+
+<h3>Disclaimer</h3>
+<p style="color:var(--dim)">THE SOFTWARE IS PROVIDED "AS IS". BELTO INC. DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED. Governed by the laws of the State of Delaware.</p>`);
+  setSuggestions(['privacy','overview','help']);
+}
+
+function cmdPaper(){
+  addMsg(`<h2>Architecture Paper</h2>
+<p>The SlyOS Architecture Paper is published on Zenodo.</p>
+<hr class="section-divider">
+<p><a href="https://zenodo.org/records/19041422" target="_blank">→ Read the paper on Zenodo</a></p>
+<p style="color:var(--dim);font-size:11px;margin-top:8px">Opens in a new tab.</p>`);
+  window.open('https://zenodo.org/records/19041422','_blank');
+  setSuggestions(['overview','models','quickstart','waitlist']);
+}
+
+function cmdLogin(){
+  addMsg(`<h2>Developer Console</h2>
+<p>Opening the SlyOS Dashboard...</p>
+<hr class="section-divider">
+<p><a href="https://dashboard-khaki-iota-54.vercel.app" target="_blank">→ dashboard-khaki-iota-54.vercel.app</a></p>
+<p style="color:var(--dim);font-size:11px;margin-top:8px">Opens in a new tab. Login or create an account there.</p>`);
+  window.open('https://dashboard-khaki-iota-54.vercel.app','_blank');
+  setSuggestions(['quickstart','models','overview','waitlist']);
+}
+
+function cmdClear(){
+  output().innerHTML='';
+  showWelcome();
+}
+
+function cmdDemo(){
+  addMsg(`<h2>Schedule a Demo</h2>
+<p>Opening Calendly to book a 30-minute live demo of SlyOS...</p>
+<hr class="section-divider">
+<p><a href="https://calendly.com/atlasova-belto/30min" target="_blank">→ calendly.com/atlasova-belto/30min</a></p>
+<p style="color:var(--dim);font-size:11px;margin-top:8px">Opens in a new tab. Pick a time that works for you.</p>`);
+  window.open('https://calendly.com/atlasova-belto/30min','_blank');
+  setSuggestions(['waitlist','overview','models','quickstart']);
+}
+
+function cmdWaitlist(){
+  loadWaitlistCount();
+  addMsg(`<h2>Join the Early Access Waitlist</h2>
+<p>Get priority SDK access, design partner program, and a direct line to our engineering team.</p>
+<div style="margin:8px 0"><span class="stat"><span class="stat-label">builders waiting </span><span class="stat-val" id="wl-inline-count">...</span></span></div>
+<hr class="section-divider">
+<div class="inline-form" id="wl-form-inline">
+  <label>First Name</label>
+  <input type="text" id="wli-fn" placeholder="Emil">
+  <label>Last Name</label>
+  <input type="text" id="wli-ln" placeholder="S.">
+  <label>Work Email</label>
+  <input type="email" id="wli-em" placeholder="you@company.com">
+  <label>Company (optional)</label>
+  <input type="text" id="wli-co" placeholder="Acme Inc.">
+  <label>What are you building? (optional)</label>
+  <select id="wli-uc">
+    <option value="">Select a use case...</option>
+    <option value="chatbot">Consumer chatbot / assistant</option>
+    <option value="productivity">Productivity / SaaS tool</option>
+    <option value="voice">Voice / transcription app</option>
+    <option value="code">Code assistant / dev tool</option>
+    <option value="enterprise">Enterprise / internal tool</option>
+    <option value="other">Something else</option>
+  </select>
+  <button onclick="submitWaitlist()">Join Waitlist →</button>
+</div>`);
+  setSuggestions(['overview','models','demo','quickstart']);
+}
+
+async function loadWaitlistCount(){
+  let count='3,000+';
+  try{
+    const r=await fetch(SCRIPT_URL+'?action=count');
+    const d=await r.json();
+    if(d.count) count=d.count;
+  }catch(e){}
+  window._wlCount=count;
+  // top bar
+  const tb=document.getElementById('topbar-wl');
+  if(tb) tb.textContent='['+count+' on waitlist]';
+  // welcome inline
+  const wl=document.getElementById('welcome-wl-count');
+  if(wl) wl.textContent=count;
+  // waitlist form inline
+  const il=document.getElementById('wl-inline-count');
+  if(il) il.textContent=count;
+}
+
+async function submitWaitlist(){
+  const fn=document.getElementById('wli-fn').value.trim();
+  const ln=document.getElementById('wli-ln').value.trim();
+  const em=document.getElementById('wli-em').value.trim();
+  const co=document.getElementById('wli-co').value.trim();
+  const uc=document.getElementById('wli-uc').value;
+  if(!fn||!ln||!em){addMsg('<p style="color:var(--red)">Please fill in first name, last name, and email.</p>');return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){addMsg('<p style="color:var(--red)">Please enter a valid email address.</p>');return;}
+  const formEl=document.getElementById('wl-form-inline');
+  formEl.innerHTML='<p style="color:var(--dim)">Submitting...</p>';
+  try{
+    const r=await fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'signup',first_name:fn,last_name:ln,email:em,company:co,use_case:uc})});
+    const d=await r.json();
+    if(d.status==='duplicate'){
+      formEl.innerHTML='<p style="color:var(--yellow)">This email is already on the waitlist.</p>';
+    } else {
+      formEl.innerHTML=`<p style="color:var(--green)">✓ You're on the list.</p><p>Position: <span style="color:#fff;font-weight:700">#${d.position||'—'}</span></p><p style="color:var(--dim);font-size:11px;margin-top:4px">Check your inbox for confirmation from support@belto.world</p>`;
+    }
+  }catch(e){
+    formEl.innerHTML='<p style="color:var(--red)">Something went wrong. Try again or email support@belto.world</p>';
+  }
+}
+
+function cmdUnknown(input){
+  addMsg(`<p style="color:var(--dim)">Command not recognized: <span style="color:var(--fg)">${input}</span></p>
+<p style="color:var(--dim)">Try one of these: <span class="highlight">overview</span>, <span class="highlight">models</span>, <span class="highlight">quickstart</span>, <span class="highlight">pricing</span>, <span class="highlight">waitlist</span>, <span class="highlight">demo</span>, or type <span class="highlight">help</span>.</p>`);
+  setSuggestions(['help','overview','models','waitlist']);
+}
+
+// ═══════════════════════════════════════
+// INPUT HANDLING
+// ═══════════════════════════════════════
+
+document.getElementById('prompt').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault();handleInput(e.target.value);}
+});
+document.getElementById('send-btn').addEventListener('click',()=>{
+  handleInput(document.getElementById('prompt').value);
+});
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+
+runBoot();
+loadWaitlistCount();
+
+</script>
+</body>
+</html>
